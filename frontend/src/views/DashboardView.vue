@@ -1,6 +1,6 @@
 <template>
   <div class="dashboard">
-    <h1>Dashboard</h1>
+    <h1>Meine Daten</h1>
     
     <div v-if="!person" class="loading">
       Lade Daten...

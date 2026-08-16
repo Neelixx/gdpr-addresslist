@@ -35,7 +35,7 @@ def verify_magic_link(request: MagicLinkVerify, db: Session = Depends(get_db)):
         data={"sub": email, "person_id": person.id, "admin": person.admin},
         expires_delta=timedelta(hours=settings.TOKEN_EXPIRY_HOURS)
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": access_token, "token_type": "bearer", "person_id": person.id, "admin": person.admin}
 
 @router.post("/login", response_model=TokenResponse)
 def login(request: LoginRequest, db: Session = Depends(get_db)):
@@ -49,4 +49,4 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
         data={"sub": person.email_1, "person_id": person.id, "admin": person.admin},
         expires_delta=timedelta(hours=settings.TOKEN_EXPIRY_HOURS)
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": access_token, "token_type": "bearer", "person_id": person.id, "admin": person.admin}

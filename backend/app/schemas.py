@@ -70,7 +70,12 @@ class PersonPublicResponse(BaseModel):
     land: Optional[str] = None
     ort: Optional[str] = None
     plz: Optional[str] = None
+    telefon_1: Optional[str] = None
+    telefon_2: Optional[str] = None
+    mobil: Optional[str] = None
     erreichbarkeit: Reachability
+    email_1: Optional[str] = None
+    email_2: Optional[str] = None
     admin: bool
     consent_sharing: bool
 
@@ -93,6 +98,8 @@ class AuditLogResponse(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str
+    person_id: int
+    admin: bool
 
 class MagicLinkRequest(BaseModel):
     email: EmailStr

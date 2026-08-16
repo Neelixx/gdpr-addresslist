@@ -20,7 +20,7 @@
     
     <div class="cta">
       <router-link v-if="!isLoggedIn" to="/login" class="btn-primary">Anmelden</router-link>
-      <router-link v-else to="/dashboard" class="btn-primary">Zum Dashboard</router-link>
+      <router-link v-else to="/meine-daten" class="btn-primary">Zu Meine Daten</router-link>
       <router-link to="/privacy" class="btn-secondary">Datenschutzerklärung</router-link>
     </div>
   </div>

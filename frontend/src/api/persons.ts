@@ -28,6 +28,25 @@ export interface Person {
   updated_at?: string
 }
 
+export interface PublicPerson {
+  id: number
+  gruppe: string
+  vorname: string
+  nachname: string
+  adresse?: string
+  land?: string
+  ort?: string
+  plz?: string
+  telefon_1?: string
+  telefon_2?: string
+  mobil?: string
+  erreichbarkeit: string
+  email_1?: string
+  email_2?: string
+  admin: boolean
+  consent_sharing: boolean
+}
+
 export const getMyData = () => {
   return api.get('/persons/me')
 }

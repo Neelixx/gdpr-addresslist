@@ -114,7 +114,7 @@ async function loginWithPassword() {
     authStore.setAuth(response.data.access_token, Number(response.data.person_id), !!response.data.admin)
     username.value = ''
     password.value = ''
-    window.location.href = '/dashboard'
+    window.location.href = '/meine-daten'
   } catch (e: any) {
     error.value = e.response?.data?.detail || 'Anmeldung fehlgeschlagen'
   } finally {
@@ -141,7 +141,7 @@ async function verifyToken(token: string) {
   try {
     const response = await verifyMagicLink({ token })
     authStore.setAuth(response.data.access_token, response.data.person_id, response.data.admin)
-    router.push('/dashboard')
+    router.push('/meine-daten')
   } catch (e: any) {
     error.value = e.response?.data?.detail || 'Ungültiger oder abgelaufener Token'
   } finally {

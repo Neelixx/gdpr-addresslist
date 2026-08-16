@@ -36,6 +36,10 @@ export const createPerson = (data: any) => {
   return api.post('/admin/persons', data)
 }
 
+export const updatePerson = (id: number, data: any) => {
+  return api.put(`/admin/persons/${id}`, data)
+}
+
 export const getAllPersons = () => {
   return api.get('/admin/persons')
 }

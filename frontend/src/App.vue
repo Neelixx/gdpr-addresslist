@@ -7,9 +7,10 @@
       <div class="nav-links">
         <router-link to="/">Startseite</router-link>
         <router-link to="/privacy">Datenschutz</router-link>
+        <router-link to="/persons">Adressliste</router-link>
         <router-link v-if="!isLoggedIn" to="/login">Anmelden</router-link>
         <template v-else>
-          <router-link to="/dashboard">Dashboard</router-link>
+          <router-link to="/meine-daten">Meine Daten</router-link>
           <router-link v-if="isAdmin" to="/admin">Admin-Panel</router-link>
           <button @click="logout" class="btn-logout">Abmelden</button>
         </template>
@@ -29,6 +30,7 @@ import { useAuthStore } from './stores/auth'
 const router = useRouter()
 const authStore = useAuthStore()
 const isLoggedIn = computed(() => !!authStore.token)
+const isAdmin = computed(() => authStore.isAdmin)
 
 function logout() {
   authStore.logout()

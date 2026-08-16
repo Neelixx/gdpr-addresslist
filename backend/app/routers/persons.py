@@ -20,7 +20,7 @@ def get_client_ip(request: Request) -> str:
 @router.get("/", response_model=List[PersonPublicResponse])
 def list_persons(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     persons = get_persons(db, skip=skip, limit=limit, include_deleted=False)
-    return [p for p in persons if p.consent_sharing and not p.is_deleted and p.erreichbarkeit.value != "verstorben"]
+    return [p for p in persons if p.consent_sharing and not p.is_deleted]
 
 @router.get("/me", response_model=PersonResponse)
 def get_my_data(request: Request, db: Session = Depends(get_db)):

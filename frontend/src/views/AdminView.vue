@@ -33,9 +33,9 @@
           <div class="form-group">
             <label>Gruppe</label>
             <select v-model="newUser.gruppe">
-              <option value="student">SchülerIn</option>
-              <option value="teacher">LehrerIn</option>
-              <option value="classmate">MitschülerIn</option>
+              <option value="SchülerIn">SchülerIn</option>
+              <option value="LehrerIn">LehrerIn</option>
+              <option value="MitschülerIn">MitschülerIn</option>
             </select>
           </div>
           <button type="submit" :disabled="creating" class="btn-primary">
@@ -45,16 +45,7 @@
       </div>
       
       <div class="card">
-        <h2>CSV Import</h2>
-        <p class="hint">Importiert Personen aus einer CSV-Datei. Vor dem Import wird automatisch ein Backup erstellt.</p>
-        <input type="file" @change="onFileSelect" accept=".csv" />
-        <button @click="importCSV" :disabled="!selectedFile || importing" class="btn-primary">
-          {{ importing ? 'Importiere...' : 'Importieren' }}
-        </button>
-      </div>
-      
-      <div class="card">
-        <h2>Backup / Restore</h2>
+        <h2>Backup / Restore / Export / Import</h2>
         <div class="backup-actions">
           <button @click="downloadBackup" class="btn-secondary">
             Backup herunterladen
@@ -66,14 +57,17 @@
               {{ restoring ? 'Wiederherstellen...' : 'Datenbank wiederherstellen' }}
             </button>
           </div>
+          <button @click="exportAll" class="btn-secondary">
+            Alle Daten exportieren (CSV)
+          </button>
+          <div class="import-section">
+            <label>CSV Import:</label>
+            <input type="file" @change="onFileSelect" accept=".csv" />
+            <button @click="importCSV" :disabled="!selectedFile || importing" class="btn-primary">
+              {{ importing ? 'Importiere...' : 'Importieren' }}
+            </button>
+          </div>
         </div>
-      </div>
-      
-      <div class="card">
-        <h2>Export</h2>
-        <button @click="exportAll" class="btn-secondary">
-          Alle Daten exportieren (CSV)
-        </button>
       </div>
       
       <div class="card">
@@ -89,6 +83,138 @@
           Magic Links generieren
         </button>
       </div>
+
+      <div class="card full-width">
+        <h2>Alle Benutzer verwalten</h2>
+        <div class="table-container">
+          <table class="admin-table">
+          <thead>
+            <tr>
+              <th @click="adminSort('id')">ID <span v-if="adminSortKey === 'id'" class="sort-icon">{{ adminSortDirection === 'asc' ? '▲' : '▼' }}</span></th>
+              <th @click="adminSort('vorname')">Vorname <span v-if="adminSortKey === 'vorname'" class="sort-icon">{{ adminSortDirection === 'asc' ? '▲' : '▼' }}</span></th>
+              <th @click="adminSort('nachname')">Nachname <span v-if="adminSortKey === 'nachname'" class="sort-icon">{{ adminSortDirection === 'asc' ? '▲' : '▼' }}</span></th>
+              <th @click="adminSort('email_1')">E-Mail <span v-if="adminSortKey === 'email_1'" class="sort-icon">{{ adminSortDirection === 'asc' ? '▲' : '▼' }}</span></th>
+              <th @click="adminSort('username')">Benutzername <span v-if="adminSortKey === 'username'" class="sort-icon">{{ adminSortDirection === 'asc' ? '▲' : '▼' }}</span></th>
+              <th @click="adminSort('gruppe')">Gruppe <span v-if="adminSortKey === 'gruppe'" class="sort-icon">{{ adminSortDirection === 'asc' ? '▲' : '▼' }}</span></th>
+              <th @click="adminSort('admin')">Admin <span v-if="adminSortKey === 'admin'" class="sort-icon">{{ adminSortDirection === 'asc' ? '▲' : '▼' }}</span></th>
+              <th>Aktionen</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="user in sortedUsers" :key="user.id">
+              <td>{{ user.id }}</td>
+              <td>{{ user.vorname }}</td>
+              <td>{{ user.nachname }}</td>
+              <td>{{ user.email_1 }}</td>
+              <td>{{ user.username || '-' }}</td>
+              <td>{{ user.gruppe }}</td>
+              <td>{{ user.admin ? 'Ja' : 'Nein' }}</td>
+              <td>
+                <button @click="editUser(user)" class="btn-small">Bearbeiten</button>
+              </td>
+            </tr>
+          </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="editingUser" class="modal-overlay" @click.self="cancelEdit">
+      <div class="modal">
+        <h3>Benutzer bearbeiten</h3>
+        <form @submit.prevent="saveEdit">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Vorname</label>
+              <input v-model="editForm.vorname" type="text" required />
+            </div>
+            <div class="form-group">
+              <label>Nachname</label>
+              <input v-model="editForm.nachname" type="text" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Geburtsname</label>
+            <input v-model="editForm.geburtsname" type="text" />
+          </div>
+          <div class="form-group">
+            <label>E-Mail 1</label>
+            <input v-model="editForm.email_1" type="email" required />
+          </div>
+          <div class="form-group">
+            <label>E-Mail 2</label>
+            <input v-model="editForm.email_2" type="email" />
+          </div>
+          <div class="form-group">
+            <label>Adresse</label>
+            <input v-model="editForm.adresse" type="text" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>PLZ</label>
+              <input v-model="editForm.plz" type="text" />
+            </div>
+            <div class="form-group">
+              <label>Ort</label>
+              <input v-model="editForm.ort" type="text" />
+            </div>
+            <div class="form-group">
+              <label>Land</label>
+              <input v-model="editForm.land" type="text" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Telefon 1</label>
+              <input v-model="editForm.telefon_1" type="tel" />
+            </div>
+            <div class="form-group">
+              <label>Telefon 2</label>
+              <input v-model="editForm.telefon_2" type="tel" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Mobil</label>
+            <input v-model="editForm.mobil" type="tel" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Erreichbarkeit</label>
+              <select v-model="editForm.erreichbarkeit">
+                <option value="-unbekannt-">-unbekannt-</option>
+                <option value="E-Mail">E-Mail</option>
+                <option value="Festnetz">Festnetz</option>
+                <option value="WhatsApp">WhatsApp</option>
+                <option value="verstorben">verstorben</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Benutzername</label>
+              <input v-model="editForm.username" type="text" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Gruppe</label>
+              <select v-model="editForm.gruppe">
+                <option value="SchülerIn">SchülerIn</option>
+                <option value="LehrerIn">LehrerIn</option>
+                <option value="MitschülerIn">MitschülerIn</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>
+                <input type="checkbox" v-model="editForm.admin" />
+                Admin-Rechte
+              </label>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">Speichern</button>
+            <button type="button" @click="cancelEdit" class="btn-secondary">Abbrechen</button>
+          </div>
+        </form>
+      </div>
     </div>
     
     <div v-if="message" class="message">{{ message }}</div>
@@ -97,9 +223,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
-import { createPerson, getAllPersons, importCSV as importCSVApi, backupDatabase as backupDatabaseApi, restoreDatabase as restoreDatabaseApi, exportAllData as exportAllDataApi, generateMagicLinks as generateMagicLinksApi } from '../api/admin'
+import { createPerson, updatePerson, getAllPersons, importCSV as importCSVApi, backupDatabase as backupDatabaseApi, restoreDatabase as restoreDatabaseApi, exportAllData as exportAllDataApi, generateMagicLinks as generateMagicLinksApi } from '../api/admin'
 
 const authStore = useAuthStore()
 const users = ref([])
@@ -118,8 +244,55 @@ const newUser = ref({
   vorname: '',
   nachname: '',
   email_1: '',
-  gruppe: 'student'
+  gruppe: 'SchülerIn'
 })
+
+const editingUser = ref<any>(null)
+const editForm = ref({
+  vorname: '',
+  nachname: '',
+  geburtsname: '',
+  adresse: '',
+  land: '',
+  ort: '',
+  plz: '',
+  telefon_1: '',
+  telefon_2: '',
+  mobil: '',
+  erreichbarkeit: '-unbekannt-',
+  email_1: '',
+  email_2: '',
+  username: '',
+  gruppe: 'SchülerIn',
+  admin: false
+})
+
+const adminSortKey = ref<string>('id')
+const adminSortDirection = ref<'asc' | 'desc'>('asc')
+
+const sortedUsers = computed(() => {
+  const data = [...users.value]
+  const key = adminSortKey.value
+  const dir = adminSortDirection.value === 'asc' ? 1 : -1
+
+  data.sort((a, b) => {
+    const aVal = (a as any)[key] ?? ''
+    const bVal = (b as any)[key] ?? ''
+    const cmp = String(aVal).localeCompare(String(bVal), 'de')
+    return dir * cmp
+  })
+
+  return data
+})
+
+function adminSort(key: string) {
+  if (adminSortKey.value === key) {
+    adminSortDirection.value = adminSortDirection.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    adminSortKey.value = key
+    adminSortDirection.value = 'asc'
+  }
+}
 
 onMounted(() => {
   loadUsers()
@@ -127,7 +300,8 @@ onMounted(() => {
 
 async function loadUsers() {
   try {
-    users.value = await getAllPersons()
+    const response = await getAllPersons()
+    users.value = response.data
   } catch (e) {
     error.value = 'Fehler beim Laden der Benutzer'
   }
@@ -154,6 +328,41 @@ async function createUser() {
   }
 }
 
+function editUser(user: any) {
+  editingUser.value = user
+  editForm.value.vorname = user.vorname
+  editForm.value.nachname = user.nachname
+  editForm.value.geburtsname = user.geburtsname || ''
+  editForm.value.adresse = user.adresse || ''
+  editForm.value.land = user.land || ''
+  editForm.value.ort = user.ort || ''
+  editForm.value.plz = user.plz || ''
+  editForm.value.telefon_1 = user.telefon_1 || ''
+  editForm.value.telefon_2 = user.telefon_2 || ''
+  editForm.value.mobil = user.mobil || ''
+  editForm.value.erreichbarkeit = user.erreichbarkeit || '-unbekannt-'
+  editForm.value.email_1 = user.email_1 || ''
+  editForm.value.email_2 = user.email_2 || ''
+  editForm.value.username = user.username || ''
+  editForm.value.gruppe = user.gruppe
+  editForm.value.admin = user.admin
+}
+
+function cancelEdit() {
+  editingUser.value = null
+}
+
+async function saveEdit() {
+  try {
+    await updatePerson(editingUser.value.id, editForm.value)
+    message.value = 'Benutzer aktualisiert'
+    editingUser.value = null
+    loadUsers()
+  } catch (e) {
+    error.value = 'Fehler beim Aktualisieren'
+  }
+}
+
 function onFileSelect(event: Event) {
   const target = event.target as HTMLInputElement
   if (target.files && target.files[0]) {
@@ -177,8 +386,8 @@ async function importCSV() {
   
   importing.value = true
   try {
-    const result = await importCSVApi(selectedFile.value)
-    message.value = result.message
+    const response = await importCSVApi(selectedFile.value)
+    message.value = response.data.message
     selectedFile.value = null
   } catch (e) {
     error.value = 'Fehler beim Import'
@@ -189,7 +398,8 @@ async function importCSV() {
 
 async function downloadBackup() {
   try {
-    const blob = await backupDatabaseApi()
+    const response = await backupDatabaseApi()
+    const blob = response.data
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -210,8 +420,8 @@ async function restoreDatabase() {
   
   restoring.value = true
   try {
-    const result = await restoreDatabaseApi(restoreFile.value)
-    message.value = result.message
+    const response = await restoreDatabaseApi(restoreFile.value)
+    message.value = response.data.message
     restoreFile.value = null
   } catch (e) {
     error.value = 'Fehler beim Wiederherstellen'
@@ -222,8 +432,8 @@ async function restoreDatabase() {
 
 async function exportAll() {
   try {
-    const result = await exportAllDataApi()
-    const blob = new Blob([result.csv], { type: 'text/csv' })
+    const response = await exportAllDataApi()
+    const blob = new Blob([response.data.csv], { type: 'text/csv' })
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -237,8 +447,8 @@ async function exportAll() {
 
 async function generateLinks() {
   try {
-    const result = await generateMagicLinksApi(selectedUserIds.value)
-    message.value = `${result.links.length} Magic Links generiert`
+    const response = await generateMagicLinksApi(selectedUserIds.value)
+    message.value = `${response.data.links.length} Magic Links generiert`
     selectedUserIds.value = []
   } catch (e) {
     error.value = 'Fehler beim Generieren der Magic Links'
@@ -388,5 +598,106 @@ input, select {
   background-color: #fee;
   color: #c00;
   border-radius: 4px;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.admin-table th,
+.admin-table td {
+  text-align: left;
+  padding: 0.75rem;
+  border-bottom: 1px solid #eee;
+}
+
+.admin-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #2c3e50;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.admin-table th:hover {
+  background-color: #e9ecef;
+}
+
+.admin-table tr:hover {
+  background-color: #f8f9fa;
+}
+
+.sort-icon {
+  margin-left: 0.5rem;
+  font-size: 0.8rem;
+  color: #3498db;
+}
+
+.btn-small {
+  padding: 0.4rem 0.8rem;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.btn-small:hover {
+  background-color: #2980b9;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal h3 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: #2c3e50;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.form-actions .btn-primary {
+  flex: 1;
+}
+
+.form-actions .btn-secondary {
+  flex: 1;
 }
 </style>
