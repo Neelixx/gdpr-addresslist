@@ -216,3 +216,18 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+Adressliste.xlsx
+Adressliste.csv
+
+# Frontend
+node_modules/
+dist/
+.vite/
+frontend/dist/
+frontend/node_modules/
+
+# Data files (sensitive)
+Adressliste.xlsx
+Adressliste.csv
+backups/
+logs/
