@@ -1,12 +1,8 @@
 from sqlalchemy import Column, Integer, String, Text, Boolean, Enum, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
 import enum
-
-class PersonGroup(str, enum.Enum):
-    student = "SchülerIn"
-    teacher = "LehrerIn"
-    classmate = "MitschülerIn"
 
 class Reachability(str, enum.Enum):
     unknown = "-unbekannt-"
@@ -15,11 +11,18 @@ class Reachability(str, enum.Enum):
     landline = "Festnetz"
     deceased = "verstorben"
 
+class Group(Base):
+    __tablename__ = "groups"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
 class Person(Base):
     __tablename__ = "persons"
 
     id = Column(Integer, primary_key=True, index=True)
-    gruppe = Column(Enum(PersonGroup), nullable=False)
+    gruppe_id = Column(Integer, ForeignKey("groups.id"), nullable=False)
     vorname = Column(String, nullable=False)
     nachname = Column(String, nullable=False)
     geburtsname = Column(String, nullable=True)
@@ -44,6 +47,8 @@ class Person(Base):
     is_blocked = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    gruppe = relationship("Group", backref="persons")
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
@@ -66,3 +71,11 @@ class MagicToken(Base):
     expires_at = Column(DateTime(timezone=True), nullable=False)
     used = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class PrivacyPolicy(Base):
+    __tablename__ = "privacy_policy"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False, default="Datenschutzerklärung für die Abiturientenliste")
+    zweck = Column(Text, nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

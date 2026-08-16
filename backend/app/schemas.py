@@ -1,10 +1,26 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, model_validator
 from datetime import datetime
-from typing import Optional
-from app.models import PersonGroup, Reachability
+from typing import Optional, Any
+from app.models import Reachability, Group
+
+class GroupBase(BaseModel):
+    name: str
+
+class GroupCreate(GroupBase):
+    pass
+
+class GroupUpdate(BaseModel):
+    name: str
+
+class GroupResponse(GroupBase):
+    id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 class PersonBase(BaseModel):
-    gruppe: PersonGroup
+    gruppe_id: int
     vorname: str
     nachname: str
     geburtsname: Optional[str] = None
@@ -29,7 +45,7 @@ class PersonCreate(PersonBase):
     password: Optional[str] = None
 
 class PersonUpdate(BaseModel):
-    gruppe: Optional[PersonGroup] = None
+    gruppe_id: Optional[int] = None
     vorname: Optional[str] = None
     nachname: Optional[str] = None
     geburtsname: Optional[str] = None
@@ -53,6 +69,7 @@ class PersonUpdate(BaseModel):
 
 class PersonResponse(PersonBase):
     id: int
+    gruppe: Any = None
     is_deleted: Optional[bool] = False
     is_blocked: Optional[bool] = False
     created_at: datetime
@@ -60,10 +77,18 @@ class PersonResponse(PersonBase):
 
     class Config:
         from_attributes = True
+    
+    @model_validator(mode='after')
+    def set_gruppe_name(self):
+        if isinstance(self.gruppe, Group):
+            self.gruppe = self.gruppe.name
+        elif self.gruppe is None:
+            self.gruppe = ""
+        return self
 
 class PersonPublicResponse(BaseModel):
     id: int
-    gruppe: PersonGroup
+    gruppe: Any = None
     vorname: str
     nachname: str
     adresse: Optional[str] = None
@@ -81,6 +106,14 @@ class PersonPublicResponse(BaseModel):
 
     class Config:
         from_attributes = True
+    
+    @model_validator(mode='after')
+    def set_gruppe_name(self):
+        if isinstance(self.gruppe, Group):
+            self.gruppe = self.gruppe.name
+        elif self.gruppe is None:
+            self.gruppe = ""
+        return self
 
 class AuditLogResponse(BaseModel):
     id: int

@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request, File, UploadFile
 from fastapi.responses import JSONResponse, FileResponse
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import Person, AuditLog, MagicToken
+from app.models import Person, AuditLog, MagicToken, PrivacyPolicy
 from app.schemas import PersonCreate, PersonUpdate, PersonResponse
-from app.crud import create_person, update_person, get_persons, get_audit_logs, import_persons
+from app.crud import create_person, update_person, get_persons, get_audit_logs, import_persons, delete_person
 from app.auth import verify_token, create_magic_token
 from app.config import settings
 from typing import List
@@ -53,8 +53,8 @@ def update_person_admin(request: Request, person_id: int, person_update: PersonU
         raise HTTPException(status_code=404, detail="Person not found")
     return person
 
-@router.get("/persons", response_model=List[PersonResponse])
-def list_all_persons(request: Request, db: Session = Depends(get_db)):
+@router.delete("/persons/{person_id}")
+def delete_person_admin(request: Request, person_id: int, db: Session = Depends(get_db)):
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -64,7 +64,24 @@ def list_all_persons(request: Request, db: Session = Depends(get_db)):
     if not payload or not payload.get("admin"):
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    return get_persons(db, include_deleted=True)
+    success = delete_person(db, person_id, get_client_ip(request))
+    if not success:
+        raise HTTPException(status_code=404, detail="Person not found")
+    
+    return {"message": "Person deleted successfully"}
+
+@router.get("/persons", response_model=List[PersonResponse])
+def list_all_persons(request: Request, include_deleted: bool = False, db: Session = Depends(get_db)):
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token = auth_header.split(" ")[1]
+    payload = verify_token(token)
+    if not payload or not payload.get("admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    return get_persons(db, include_deleted=include_deleted)
 
 @router.post("/import")
 async def import_csv(request: Request, file: UploadFile = File(...), db: Session = Depends(get_db)):
@@ -330,3 +347,74 @@ def generate_magic_links(request: Request, person_ids: List[int] = Form(...), db
     db.commit()
     
     return {"links": results}
+
+@router.get("/privacy-policy")
+def get_privacy_policy(request: Request, db: Session = Depends(get_db)):
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token = auth_header.split(" ")[1]
+    payload = verify_token(token)
+    if not payload or not payload.get("admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    admin = db.query(Person).filter(Person.id == 1).first()
+    policy = db.query(PrivacyPolicy).first()
+    
+    if not policy:
+        policy = PrivacyPolicy(zweck="Die Verarbeitung Ihrer Daten erfolgt ausschließlich zum Zweck der Organisation und Durchführung von Alumni-Events (z. B. Jubiläen).")
+        db.add(policy)
+        db.commit()
+        db.refresh(policy)
+    
+    verantwortlicher = f"{admin.vorname} {admin.nachname}" if admin else "[Name des Administrators / Verantwortlichen]"
+    kontakt = admin.email_1 if admin and admin.email_1 else "[Kontaktmöglichkeit]"
+    
+    content = f"""Verantwortlicher: {verantwortlicher}, {kontakt}.
+
+Zweck der Verarbeitung
+{policy.zweck}
+
+Rechtsgrundlage
+Die Verarbeitung erfolgt auf Basis Ihrer ausdrücklichen Einwilligung gemäß Art. 6 Abs. 1 lit. a DSGVO.
+
+Datenkategorien
+Name, Anschrift, E-Mail, Telefonnummer sowie ggf. Fotos und Gruppenangaben.
+
+Weitergabe an Dritte
+Ihre Daten werden nur dann für andere Mitglieder der Liste sichtbar, wenn Sie explizit der Funktion "Teilen der Daten" zugestimmt haben. Eine Weitergabe an externe Firmen erfolgt nicht.
+
+Ihre Rechte
+Sie haben das Recht auf Auskunft, Berichtigung, Löschung ("Recht auf Vergessenwerden") sowie den Widerruf Ihrer Einwilligung jederzeit mit Wirkung für die Zukunft.
+
+Speicherdauer
+Die Daten werden so lange gespeichert, wie Sie Ihre Zustimmung nicht widerrufen oder die Liste aufgelöst wird."""
+    
+    return {
+        "title": policy.title,
+        "content": content
+    }
+
+@router.put("/privacy-policy")
+def update_privacy_policy(request: Request, policy_update: dict, db: Session = Depends(get_db)):
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token = auth_header.split(" ")[1]
+    payload = verify_token(token)
+    if not payload or not payload.get("admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    policy = db.query(PrivacyPolicy).first()
+    if not policy:
+        policy = PrivacyPolicy()
+        db.add(policy)
+    
+    policy.zweck = policy_update.get("zweck", policy.zweck)
+    policy.title = policy_update.get("title", policy.title)
+    db.commit()
+    db.refresh(policy)
+    
+    return {"message": "Datenschutzerklärung aktualisiert"}

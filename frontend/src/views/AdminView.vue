@@ -32,16 +32,43 @@
           </div>
           <div class="form-group">
             <label>Gruppe</label>
-            <select v-model="newUser.gruppe">
-              <option value="SchülerIn">SchülerIn</option>
-              <option value="LehrerIn">LehrerIn</option>
-              <option value="MitschülerIn">MitschülerIn</option>
+            <select v-model="newUser.gruppe_id">
+              <option v-for="group in groups" :key="group.id" :value="group.id">{{ group.name }}</option>
             </select>
           </div>
           <button type="submit" :disabled="creating" class="btn-primary">
             {{ creating ? 'Erstellen...' : 'Benutzer erstellen' }}
           </button>
         </form>
+      </div>
+      
+      <div class="card">
+        <h2>Gruppen verwalten</h2>
+        <div class="groups-list">
+          <div v-for="group in groups" :key="group.id" class="group-item">
+            <input v-model="editGroups[group.id]" type="text" @blur="updateGroupName(group.id, editGroups[group.id])" />
+            <button @click="deleteGroup(group.id, group.name)" class="btn-small btn-danger-small" title="Löschen">×</button>
+          </div>
+        </div>
+        <div class="add-group">
+          <input v-model="newGroupName" type="text" placeholder="Neue Gruppe..." @keyup.enter="addGroup" />
+          <button @click="addGroup" class="btn-small">Hinzufügen</button>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h2>Datenschutzerklärung</h2>
+        <div class="form-group">
+          <label>Titel</label>
+          <input v-model="privacyPolicyTitle" type="text" />
+        </div>
+        <div class="form-group">
+          <label>Inhalt</label>
+          <textarea v-model="privacyPolicy" rows="15" class="privacy-textarea"></textarea>
+        </div>
+        <button @click="savePrivacyPolicy" :disabled="savingPrivacy" class="btn-primary">
+          {{ savingPrivacy ? 'Speichern...' : 'Speichern' }}
+        </button>
       </div>
       
       <div class="card">
@@ -107,7 +134,7 @@
               <td>{{ user.nachname }}</td>
               <td>{{ user.email_1 }}</td>
               <td>{{ user.username || '-' }}</td>
-              <td>{{ user.gruppe }}</td>
+              <td>{{ getGroupName(user.gruppe_id) }}</td>
               <td>{{ user.admin ? 'Ja' : 'Nein' }}</td>
               <td>
                 <button @click="editUser(user)" class="btn-small">Bearbeiten</button>
@@ -196,10 +223,8 @@
           <div class="form-row">
             <div class="form-group">
               <label>Gruppe</label>
-              <select v-model="editForm.gruppe">
-                <option value="SchülerIn">SchülerIn</option>
-                <option value="LehrerIn">LehrerIn</option>
-                <option value="MitschülerIn">MitschülerIn</option>
+              <select v-model="editForm.gruppe_id">
+                <option v-for="group in groups" :key="group.id" :value="group.id">{{ group.name }}</option>
               </select>
             </div>
             <div class="form-group">
@@ -211,9 +236,21 @@
           </div>
           <div class="form-actions">
             <button type="submit" class="btn-primary">Speichern</button>
+            <button type="button" @click="confirmDelete" class="btn-danger">Löschen</button>
             <button type="button" @click="cancelEdit" class="btn-secondary">Abbrechen</button>
           </div>
         </form>
+        
+        <div v-if="showDeleteConfirm" class="delete-confirm">
+          <p>Geben Sie zur Bestätigung die ID <strong>{{ editingUser ? editingUser.id : '' }}</strong> ein:</p>
+          <input v-model="deleteConfirmText" type="text" placeholder="ID eingeben" />
+          <div class="form-actions">
+            <button @click="executeDelete" :disabled="deleteConfirmText !== String(editingUser ? editingUser.id : '')" class="btn-danger">
+              Endgültig löschen
+            </button>
+            <button @click="cancelDelete" class="btn-secondary">Abbrechen</button>
+          </div>
+        </div>
       </div>
     </div>
     
@@ -225,7 +262,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
-import { createPerson, updatePerson, getAllPersons, importCSV as importCSVApi, backupDatabase as backupDatabaseApi, restoreDatabase as restoreDatabaseApi, exportAllData as exportAllDataApi, generateMagicLinks as generateMagicLinksApi } from '../api/admin'
+import { createPerson, updatePerson, deletePerson, getAllPersons, importCSV as importCSVApi, backupDatabase as backupDatabaseApi, restoreDatabase as restoreDatabaseApi, exportAllData as exportAllDataApi, generateMagicLinks as generateMagicLinksApi, getPrivacyPolicy as getPrivacyPolicyApi, updatePrivacyPolicy as updatePrivacyPolicyApi } from '../api/admin'
+import { getGroups as getGroupsApi, createGroup as createGroupApi, updateGroup as updateGroupApi, deleteGroup as deleteGroupApi } from '../api/groups'
 
 const authStore = useAuthStore()
 const users = ref([])
@@ -244,7 +282,7 @@ const newUser = ref({
   vorname: '',
   nachname: '',
   email_1: '',
-  gruppe: 'SchülerIn'
+  gruppe_id: 1
 })
 
 const editingUser = ref<any>(null)
@@ -263,12 +301,23 @@ const editForm = ref({
   email_1: '',
   email_2: '',
   username: '',
-  gruppe: 'SchülerIn',
+  gruppe_id: 1,
   admin: false
 })
 
+const groups = ref<any[]>([])
+const editGroups = ref<Record<number, string>>({})
+const newGroupName = ref('')
+
+const showDeleteConfirm = ref(false)
+const deleteConfirmText = ref('')
+
 const adminSortKey = ref<string>('id')
 const adminSortDirection = ref<'asc' | 'desc'>('asc')
+
+const privacyPolicy = ref('')
+const privacyPolicyTitle = ref('')
+const savingPrivacy = ref(false)
 
 const sortedUsers = computed(() => {
   const data = [...users.value]
@@ -276,14 +325,25 @@ const sortedUsers = computed(() => {
   const dir = adminSortDirection.value === 'asc' ? 1 : -1
 
   data.sort((a, b) => {
-    const aVal = (a as any)[key] ?? ''
-    const bVal = (b as any)[key] ?? ''
+    let aVal = (a as any)[key] ?? ''
+    let bVal = (b as any)[key] ?? ''
+    
+    if (key === 'gruppe') {
+      aVal = getGroupName(aVal)
+      bVal = getGroupName(bVal)
+    }
+    
     const cmp = String(aVal).localeCompare(String(bVal), 'de')
     return dir * cmp
   })
 
   return data
 })
+
+function getGroupName(groupId: number): string {
+  const group = groups.value.find(g => g.id === groupId)
+  return group ? group.name : '-'
+}
 
 function adminSort(key: string) {
   if (adminSortKey.value === key) {
@@ -296,14 +356,28 @@ function adminSort(key: string) {
 
 onMounted(() => {
   loadUsers()
+  loadGroups()
+  loadPrivacyPolicy()
 })
 
 async function loadUsers() {
   try {
-    const response = await getAllPersons()
+    const response = await getAllPersons(false)
     users.value = response.data
   } catch (e) {
     error.value = 'Fehler beim Laden der Benutzer'
+  }
+}
+
+async function loadGroups() {
+  try {
+    const response = await getGroupsApi()
+    groups.value = response.data
+    groups.value.forEach(g => {
+      editGroups.value[g.id] = g.name
+    })
+  } catch (e) {
+    console.error('Fehler beim Laden der Gruppen', e)
   }
 }
 
@@ -318,13 +392,51 @@ async function createUser() {
       vorname: '',
       nachname: '',
       email_1: '',
-      gruppe: 'student'
+      gruppe_id: 1
     }
     loadUsers()
   } catch (e) {
     error.value = 'Fehler beim Erstellen des Benutzers'
   } finally {
     creating.value = false
+  }
+}
+
+async function addGroup() {
+  if (!newGroupName.value.trim()) return
+  
+  try {
+    await createGroupApi(newGroupName.value.trim())
+    newGroupName.value = ''
+    await loadGroups()
+    message.value = 'Gruppe erstellt'
+  } catch (e: any) {
+    error.value = e.response?.data?.detail || 'Fehler beim Erstellen der Gruppe'
+  }
+}
+
+async function updateGroupName(groupId: number, name: string) {
+  if (!name.trim()) return
+  
+  try {
+    await updateGroupApi(groupId, name.trim())
+    await loadGroups()
+    message.value = 'Gruppe umbenannt'
+  } catch (e: any) {
+    error.value = e.response?.data?.detail || 'Fehler beim Umbenennen der Gruppe'
+    await loadGroups()
+  }
+}
+
+async function deleteGroup(groupId: number, groupName: string) {
+  if (!confirm(`Gruppe "${groupName}" wirklich löschen?`)) return
+  
+  try {
+    await deleteGroupApi(groupId)
+    await loadGroups()
+    message.value = 'Gruppe gelöscht'
+  } catch (e: any) {
+    error.value = e.response?.data?.detail || 'Fehler beim Löschen der Gruppe'
   }
 }
 
@@ -344,7 +456,7 @@ function editUser(user: any) {
   editForm.value.email_1 = user.email_1 || ''
   editForm.value.email_2 = user.email_2 || ''
   editForm.value.username = user.username || ''
-  editForm.value.gruppe = user.gruppe
+  editForm.value.gruppe_id = user.gruppe_id || 1
   editForm.value.admin = user.admin
 }
 
@@ -360,6 +472,31 @@ async function saveEdit() {
     loadUsers()
   } catch (e) {
     error.value = 'Fehler beim Aktualisieren'
+  }
+}
+
+function confirmDelete() {
+  showDeleteConfirm.value = true
+  deleteConfirmText.value = ''
+}
+
+function cancelDelete() {
+  showDeleteConfirm.value = false
+  deleteConfirmText.value = ''
+}
+
+async function executeDelete() {
+  if (!editingUser.value) return
+  
+  try {
+    await deletePerson(editingUser.value.id)
+    message.value = 'Benutzer gelöscht'
+    editingUser.value = null
+    showDeleteConfirm.value = false
+    deleteConfirmText.value = ''
+    loadUsers()
+  } catch (e) {
+    error.value = 'Fehler beim Löschen'
   }
 }
 
@@ -452,6 +589,38 @@ async function generateLinks() {
     selectedUserIds.value = []
   } catch (e) {
     error.value = 'Fehler beim Generieren der Magic Links'
+  }
+}
+
+async function loadPrivacyPolicy() {
+  try {
+    const response = await getPrivacyPolicyApi()
+    privacyPolicyTitle.value = response.data.title
+    privacyPolicy.value = response.data.content
+  } catch (e) {
+    console.error('Fehler beim Laden der Datenschutzerklärung', e)
+  }
+}
+
+async function savePrivacyPolicy() {
+  const parts = privacyPolicy.value.split('\n\n')
+  let zweck = ''
+  for (const part of parts) {
+    const lines = part.split('\n')
+    if (lines[0] === 'Zweck der Verarbeitung') {
+      zweck = lines.slice(1).join('\n')
+      break
+    }
+  }
+  
+  savingPrivacy.value = true
+  try {
+    await updatePrivacyPolicyApi({ title: privacyPolicyTitle.value, zweck: zweck.trim() })
+    message.value = 'Datenschutzerklärung gespeichert'
+  } catch (e) {
+    error.value = 'Fehler beim Speichern der Datenschutzerklärung'
+  } finally {
+    savingPrivacy.value = false
   }
 }
 </script>
@@ -699,5 +868,130 @@ input, select {
 
 .form-actions .btn-secondary {
   flex: 1;
+}
+
+.delete-confirm {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  background-color: #fff5f5;
+  border: 1px solid #feb2b2;
+  border-radius: 8px;
+}
+
+.delete-confirm p {
+  margin-bottom: 1rem;
+  color: #c53030;
+}
+
+.delete-confirm input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #feb2b2;
+  border-radius: 4px;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+.btn-danger {
+  padding: 0.6rem 1.2rem;
+  background-color: #c0392b;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  margin-top: 0.5rem;
+}
+
+.btn-danger:hover {
+  background-color: #a93226;
+}
+
+.btn-danger:disabled {
+  background-color: #bdc3c7;
+  cursor: not-allowed;
+}
+
+.groups-list {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.group-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.group-item:last-child {
+  border-bottom: none;
+}
+
+.group-item input {
+  flex: 1;
+  padding: 0.4rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.btn-small {
+  padding: 0.35rem 0.7rem;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.btn-small:hover {
+  background-color: #2980b9;
+}
+
+.btn-danger-small {
+  background-color: #c0392b;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-danger-small:hover {
+  background-color: #a93226;
+}
+
+.add-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.add-group input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.privacy-textarea {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-family: monospace;
+  resize: vertical;
 }
 </style>

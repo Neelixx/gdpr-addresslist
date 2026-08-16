@@ -1,6 +1,6 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
-from app.models import Person, AuditLog
+from app.models import Person, AuditLog, Group
 from app.schemas import PersonCreate, PersonUpdate
 from typing import Optional, List
 from datetime import datetime
@@ -8,13 +8,13 @@ from app.auth import get_password_hash
 from fastapi import HTTPException
 
 def get_person(db: Session, person_id: int) -> Optional[Person]:
-    return db.query(Person).filter(Person.id == person_id).first()
+    return db.query(Person).options(joinedload(Person.gruppe)).filter(Person.id == person_id).first()
 
 def get_person_by_email(db: Session, email: str) -> Optional[Person]:
-    return db.query(Person).filter(Person.email_1 == email).first()
+    return db.query(Person).options(joinedload(Person.gruppe)).filter(Person.email_1 == email).first()
 
 def get_persons(db: Session, skip: int = 0, limit: int = 100, include_deleted: bool = False) -> List[Person]:
-    query = db.query(Person)
+    query = db.query(Person).options(joinedload(Person.gruppe))
     if not include_deleted:
         query = query.filter(or_(Person.is_deleted == False, Person.is_deleted.is_(None)))
     return query.offset(skip).limit(limit).all()

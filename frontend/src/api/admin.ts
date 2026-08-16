@@ -40,8 +40,12 @@ export const updatePerson = (id: number, data: any) => {
   return api.put(`/admin/persons/${id}`, data)
 }
 
-export const getAllPersons = () => {
-  return api.get('/admin/persons')
+export const deletePerson = (id: number) => {
+  return api.delete(`/admin/persons/${id}`)
+}
+
+export const getAllPersons = (includeDeleted: boolean = false) => {
+  return api.get('/admin/persons', { params: { include_deleted: includeDeleted } })
 }
 
 export const importCSV = (file: File) => {
@@ -80,4 +84,26 @@ export const generateMagicLinks = (personIds: number[]) => {
       'Content-Type': 'multipart/form-data'
     }
   })
+}
+
+export interface PrivacyPolicyResponse {
+  title: string
+  content: string
+}
+
+export interface PrivacyPolicyUpdate {
+  title: string
+  zweck: string
+}
+
+export const getPrivacyPolicy = () => {
+  return api.get<PrivacyPolicyResponse>('/admin/privacy-policy')
+}
+
+export const getPublicPrivacyPolicy = () => {
+  return api.get<PrivacyPolicyResponse>('/privacy-policy')
+}
+
+export const updatePrivacyPolicy = (data: PrivacyPolicyUpdate) => {
+  return api.put('/admin/privacy-policy', data)
 }
