@@ -136,6 +136,7 @@ class TokenResponse(BaseModel):
 
 class MagicLinkRequest(BaseModel):
     email: EmailStr
+    hcaptcha_token: str = ""
 
 class MagicLinkVerify(BaseModel):
     token: str

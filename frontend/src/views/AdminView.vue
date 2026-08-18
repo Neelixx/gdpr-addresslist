@@ -605,17 +605,21 @@ async function loadPrivacyPolicy() {
 async function savePrivacyPolicy() {
   const parts = privacyPolicy.value.split('\n\n')
   let zweck = ''
+  let verantwortlicher = ''
   for (const part of parts) {
     const lines = part.split('\n')
     if (lines[0] === 'Zweck der Verarbeitung') {
       zweck = lines.slice(1).join('\n')
-      break
+    }
+    if (lines[0].startsWith('Verantwortlicher:')) {
+      // Extract "Max Datenschutzverantwortlicher, naboo61@gmail.com" from "Verantwortlicher: Max Datenschutzverantwortlicher, naboo61@gmail.com."
+      verantwortlicher = lines[0].replace('Verantwortlicher:', '').trim()
     }
   }
   
   savingPrivacy.value = true
   try {
-    await updatePrivacyPolicyApi({ title: privacyPolicyTitle.value, zweck: zweck.trim() })
+    await updatePrivacyPolicyApi({ title: privacyPolicyTitle.value, zweck: zweck.trim(), verantwortlicher: verantwortlicher.trim() })
     message.value = 'Datenschutzerklärung gespeichert'
   } catch (e) {
     error.value = 'Fehler beim Speichern der Datenschutzerklärung'

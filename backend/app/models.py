@@ -78,4 +78,5 @@ class PrivacyPolicy(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False, default="Datenschutzerklärung für die Abiturientenliste")
     zweck = Column(Text, nullable=False)
+    verantwortlicher = Column(Text, nullable=True)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

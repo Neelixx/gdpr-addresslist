@@ -2,6 +2,7 @@ import api from './client'
 
 export interface MagicLinkRequest {
   email: string
+  hcaptcha_token: string
 }
 
 export interface MagicLinkVerify {

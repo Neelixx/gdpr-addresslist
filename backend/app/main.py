@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine, SessionLocal
 from app.routers import auth, persons, admin, groups
 from app.models import Person, PrivacyPolicy
+from app.init_admin import create_admin_user
 import logging
 
 logging.basicConfig(
@@ -16,6 +17,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 Base.metadata.create_all(bind=engine)
+create_admin_user()
 
 app = FastAPI(title="GDPR Address List", version="1.0.0")
 
@@ -50,11 +52,18 @@ def privacy_policy():
             db.commit()
             db.refresh(policy)
         
-        verantwortlicher = f"{admin.vorname} {admin.nachname}" if admin else "[Name des Administrators / Verantwortlichen]"
+        verantwortlicher = policy.verantwortlicher if policy.verantwortlicher else (f"{admin.vorname} {admin.nachname}" if admin else "[Name des Administrators / Verantwortlichen]")
         kontakt = admin.email_1 if admin and admin.email_1 else "[Kontaktmöglichkeit]"
+        
+        # If custom verantwortlicher is set, use it as-is; otherwise append contact
+        if policy.verantwortlicher:
+            verantwortlicher_line = f"Verantwortlicher: {verantwortlicher}."
+        else:
+            verantwortlicher_line = f"Verantwortlicher: {verantwortlicher}, {kontakt}."
+        
         title = policy.title if policy else "Datenschutzerklärung für die Abiturientenliste"
         
-        content = f"""Verantwortlicher: {verantwortlicher}, {kontakt}.
+        content = f"""{verantwortlicher_line}
 
 Zweck der Verarbeitung
 {policy.zweck}

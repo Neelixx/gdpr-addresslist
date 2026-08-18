@@ -368,10 +368,16 @@ def get_privacy_policy(request: Request, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(policy)
     
-    verantwortlicher = f"{admin.vorname} {admin.nachname}" if admin else "[Name des Administrators / Verantwortlichen]"
+    verantwortlicher = policy.verantwortlicher if policy.verantwortlicher else (f"{admin.vorname} {admin.nachname}" if admin else "[Name des Administrators / Verantwortlichen]")
     kontakt = admin.email_1 if admin and admin.email_1 else "[Kontaktmöglichkeit]"
     
-    content = f"""Verantwortlicher: {verantwortlicher}, {kontakt}.
+    # If custom verantwortlicher is set, use it as-is; otherwise append contact
+    if policy.verantwortlicher:
+        verantwortlicher_line = f"Verantwortlicher: {verantwortlicher}."
+    else:
+        verantwortlicher_line = f"Verantwortlicher: {verantwortlicher}, {kontakt}."
+    
+    content = f"""{verantwortlicher_line}
 
 Zweck der Verarbeitung
 {policy.zweck}
@@ -414,6 +420,7 @@ def update_privacy_policy(request: Request, policy_update: dict, db: Session = D
     
     policy.zweck = policy_update.get("zweck", policy.zweck)
     policy.title = policy_update.get("title", policy.title)
+    policy.verantwortlicher = policy_update.get("verantwortlicher", policy.verantwortlicher)
     db.commit()
     db.refresh(policy)
     

@@ -82,10 +82,11 @@
               <label>Ort</label>
               <input v-model="form.ort" type="text" />
             </div>
-            <div class="form-group">
-              <label>Land</label>
-              <input v-model="form.land" type="text" />
-            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Land</label>
+            <input v-model="form.land" type="text" />
           </div>
           
           <div class="form-group">
@@ -210,6 +211,15 @@ async function loadData() {
   }
 }
 
+// Handle consent updates from ConsentManager without losing form data
+async function handleConsentUpdated(field: string, value: boolean) {
+  // Update only the specific consent field in person and form
+  if (person.value) {
+    person.value[field] = value
+    form[field] = value
+  }
+}
+
 async function updateData() {
   if (form.erreichbarkeit === 'Festnetz' && !form.telefon_1 && !form.telefon_2) {
     alert('Bitte geben Sie mindestens eine Festnetznummer an, wenn die Erreichbarkeit auf Festnetz gesetzt wird.')
@@ -304,7 +314,7 @@ async function changePassword() {
 }
 
 h1 {
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
   color: #2c3e50;
 }
 

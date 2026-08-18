@@ -37,11 +37,12 @@ const message = ref('')
 
 async function updateConsent(field: string, event: Event) {
   const target = event.target as HTMLInputElement
+  const value = target.checked
   message.value = 'Speichern...'
   try {
-    await updateMyData({ [field]: target.checked })
+    await updateMyData({ [field]: value })
     message.value = 'Gespeichert!'
-    emit('updated')
+    emit('updated', { field, value })
     setTimeout(() => { message.value = '' }, 2000)
   } catch (e) {
     message.value = 'Fehler beim Speichern'

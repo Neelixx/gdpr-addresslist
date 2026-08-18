@@ -3,6 +3,8 @@ WORKDIR /app
 COPY package.json ./
 RUN npm install
 COPY . .
+ARG VITE_HCAPTCHA_SITE_KEY
+ENV VITE_HCAPTCHA_SITE_KEY=$VITE_HCAPTCHA_SITE_KEY
 RUN npx vite build
 
 FROM nginx:alpine

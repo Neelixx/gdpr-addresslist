@@ -94,6 +94,7 @@ export interface PrivacyPolicyResponse {
 export interface PrivacyPolicyUpdate {
   title: string
   zweck: string
+  verantwortlicher?: string
 }
 
 export const getPrivacyPolicy = () => {
