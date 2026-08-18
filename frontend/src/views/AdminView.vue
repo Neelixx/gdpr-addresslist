@@ -2,6 +2,14 @@
   <div class="admin">
     <h1>Admin-Panel</h1>
     
+    <!-- Toast Notifications -->
+    <div class="toast-container" v-if="toasts.length > 0">
+      <div v-for="(toast, index) in toasts" :key="index" :class="['toast', toast.type]">
+        <span>{{ toast.message }}</span>
+        <button @click="removeToast(index)" class="toast-close">&times;</button>
+      </div>
+    </div>
+    
     <div class="admin-grid">
       <div class="card">
         <h2>Benutzer anlegen</h2>
@@ -275,6 +283,19 @@ const selectedFile = ref<File | null>(null)
 const restoreFile = ref<File |null>(null)
 const message = ref('')
 const error = ref('')
+const toasts = ref<Array<{message: string, type: 'success' | 'error' | 'info'}>>([])
+
+function addToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
+  toasts.value.push({ message, type })
+  setTimeout(() => {
+    const index = toasts.value.findIndex(t => t.message === message)
+    if (index !== -1) toasts.value.splice(index, 1)
+  }, 5000)
+}
+
+function removeToast(index: number) {
+  toasts.value.splice(index, 1)
+}
 
 const newUser = ref({
   username: '',
@@ -558,10 +579,12 @@ async function restoreDatabase() {
   restoring.value = true
   try {
     const response = await restoreDatabaseApi(restoreFile.value)
-    message.value = response.data.message
+    addToast(response.data.message, 'success')
     restoreFile.value = null
+    loadUsers()
+    loadGroups()
   } catch (e) {
-    error.value = 'Fehler beim Wiederherstellen'
+    addToast('Fehler beim Wiederherstellen', 'error')
   } finally {
     restoring.value = false
   }
@@ -880,6 +903,88 @@ input, select {
   background-color: #fff5f5;
   border: 1px solid #feb2b2;
   border-radius: 8px;
+}
+
+.delete-confirm p {
+  margin-bottom: 1rem;
+  color: #c53030;
+}
+
+.delete-confirm input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #feb2b2;
+  border-radius: 4px;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Toast Notifications */
+.toast-container {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.toast {
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-width: 250px;
+  max-width: 400px;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.toast.success {
+  background-color: #d4edda;
+  color: #155724;
+  border-left: 4px solid #28a745;
+}
+
+.toast.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border-left: 4px solid #dc3545;
+}
+
+.toast.info {
+  background-color: #d1ecf1;
+  color: #0c5460;
+  border-left: 4px solid #17a2b8;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.7;
+  padding: 0;
+  line-height: 1;
+}
+
+.toast-close:hover {
+  opacity: 1;
 }
 
 .delete-confirm p {

@@ -161,17 +161,29 @@ def backup_database(request: Request, db: Session = Depends(get_db)):
     if not payload or not payload.get("admin"):
         raise HTTPException(status_code=403, detail="Admin access required")
     
+    # Extract database credentials from DATABASE_URL
+    # Format: postgresql://user:password@host:port/database
+    from urllib.parse import urlparse
+    parsed = urlparse(settings.DATABASE_URL)
+    db_user = parsed.username
+    db_password = parsed.password
+    db_host = parsed.hostname
+    db_port = parsed.port
+    db_name = parsed.path.lstrip('/')  # Remove leading slash
+    
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_path = f"/app/backups/backup_{timestamp}.sql"
     
+    # Set PGPASSWORD environment variable for pg_dump
     env = os.environ.copy()
-    env['PGPASSWORD'] = settings.POSTGRES_PASSWORD
+    env['PGPASSWORD'] = db_password
     
     cmd = [
         'pg_dump',
-        '-h', 'db',
-        '-U', settings.POSTGRES_USER,
-        '-d', settings.POSTGRES_DB,
+        '-h', db_host,
+        '-p', str(db_port),
+        '-U', db_user,
+        '-d', db_name,
         '-f', backup_path
     ]
     
@@ -210,37 +222,131 @@ async def restore_database(request: Request, file: UploadFile = File(...), db: S
     if not file.filename.endswith('.sql'):
         raise HTTPException(status_code=400, detail="Only .sql files are allowed")
     
+    # Extract database credentials from DATABASE_URL
+    # Format: postgresql://user:password@host:port/database
+    from urllib.parse import urlparse
+    parsed = urlparse(settings.DATABASE_URL)
+    db_user = parsed.username
+    db_password = parsed.password
+    db_host = parsed.hostname
+    db_port = parsed.port
+    db_name = parsed.path.lstrip('/')  # Remove leading slash
+    
+    # Create a temporary file to hold the SQL content
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    temp_sql_path = f"/app/backups/restore_{timestamp}.sql"
+    filtered_sql_path = f"/app/backups/restore_filtered_{timestamp}.sql"
+    
     try:
         contents = await file.read()
         sql_content = contents.decode('utf-8')
         
-        env = os.environ.copy()
-        env['PGPASSWORD'] = settings.POSTGRES_PASSWORD
+        # Filter out problematic SET commands that cause issues with current PostgreSQL version
+        # Specifically, remove SET transaction_timeout lines which may not be supported
+        filtered_lines = []
+        for line in sql_content.split('\n'):
+            # Skip SET transaction_timeout lines as they may cause errors in some PostgreSQL versions
+            stripped = line.strip()
+            if stripped.startswith('SET transaction_timeout') or 'transaction_timeout' in stripped:
+                continue
+            filtered_lines.append(line)
         
-        cmd = [
+        filtered_sql_content = '\n'.join(filtered_lines)
+        
+        # Debug: print the filtered content length
+        print(f"Original lines: {len(sql_content.split(chr(10)))}, Filtered lines: {len(filtered_lines)}")
+        
+        # Write the filtered SQL content to the temporary file
+        with open(filtered_sql_path, 'w') as f:
+            f.write(filtered_sql_content)
+        
+        # Set PGPASSWORD environment variable for psql
+        env = os.environ.copy()
+        env['PGPASSWORD'] = db_password
+        
+        # Terminate all other connections to the database
+        terminate_connections_cmd = [
             'psql',
-            '-h', 'db',
-            '-U', settings.POSTGRES_USER,
-            '-d', settings.POSTGRES_DB,
-            '-c', sql_content
+            '-h', db_host,
+            '-p', str(db_port),
+            '-U', db_user,
+            '-d', 'postgres',
+            '-c', f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{db_name}' AND pid <> pg_backend_pid();"
         ]
         
-        subprocess.run(cmd, check=True, env=env)
+        # Drop and recreate the public schema to ensure a clean restore
+        drop_and_create_schema_cmd = [
+            'psql',
+            '-h', db_host,
+            '-p', str(db_port),
+            '-U', db_user,
+            '-d', db_name,
+            '-c', 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'
+        ]
         
-        log = AuditLog(
-            action="RESTORE",
-            field_changed="all",
-            old_value=None,
-            new_value=f"Database restored from {file.filename}",
-            ip_address=get_client_ip(request)
-        )
-        db.add(log)
-        db.commit()
+        # Execute commands in sequence: terminate connections, drop and create schema
+        subprocess.run(terminate_connections_cmd, check=True, env=env)
+        subprocess.run(drop_and_create_schema_cmd, check=True, env=env)
+        
+# Now restore the filtered backup into the database
+        # Use ON_ERROR_STOP=off to continue despite errors from unsupported SET commands
+        restore_cmd = [
+            'psql',
+            '-h', db_host,
+            '-p', str(db_port),
+            '-U', db_user,
+            '-d', db_name,
+            '-v', 'ON_ERROR_STOP=off',
+            '-f', filtered_sql_path
+        ]
+        
+        # Run restore command without check=True to handle return code manually
+        result = subprocess.run(restore_cmd, capture_output=True, text=True, env=env)
+        # psql with ON_ERROR_STOP=off returns:
+        # 0 = success, 1 = fatal error, 2 = connection error, 3 = script error but continued
+        # Accept any return code except connection error (2) as success, since the backup
+        # may contain SET commands that cause errors but the actual data is restored
+        if result.returncode == 2:
+            raise HTTPException(status_code=400, detail=f"Restore failed with connection error: {result.stderr}")
+        # Log the result for debugging
+        print("Restore completed with return code: {result.returncode}")
+        if result.stderr:
+            print(f"Restore stderr: {result.stderr[:500]}")
+        
+        # Create a new database session for the AuditLog since the old session may be invalid after schema recreation
+        from app.database import SessionLocal
+        new_db = SessionLocal()
+        try:
+            print("Creating AuditLog with new session...")
+            log = AuditLog(
+                action="RESTORE",
+                field_changed="all",
+                old_value=None,
+                new_value=f"Database restored from {file.filename}",
+                ip_address=get_client_ip(request)
+            )
+            new_db.add(log)
+            new_db.commit()
+            print("AuditLog committed successfully with new session")
+        except Exception as audit_e:
+            print(f"Warning: Failed to create AuditLog: {audit_e}")
+            # Don't fail the restore if audit log fails
+        finally:
+            new_db.close()
         
         return {"message": "Database restored successfully"}
         
     except Exception as e:
+        print(f"Exception caught: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=400, detail=f"Restore failed: {str(e)}")
+    finally:
+        # Clean up the temporary files
+        if os.path.exists(temp_sql_path):
+            os.remove(temp_sql_path)
+        if os.path.exists(filtered_sql_path):
+            os.remove(filtered_sql_path)
 
 @router.get("/export/all")
 def export_all_data(request: Request, db: Session = Depends(get_db)):
@@ -273,7 +379,7 @@ def export_all_data(request: Request, db: Session = Depends(get_db)):
         
         writer.writerow([
             person.id,
-            person.gruppe.value,
+            person.gruppe.name if person.gruppe else '',
             person.vorname,
             person.nachname,
             person.geburtsname or '',

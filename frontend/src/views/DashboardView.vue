@@ -6,123 +6,124 @@
       Lade Daten...
     </div>
     
-    <div v-else>
-      <div class="card">
-        <h2>Meine Daten</h2>
-        <form @submit.prevent="updateData">
-          <div class="form-row">
-            <div class="form-group">
-              <label>Benutzername</label>
-              <input v-model="form.username" type="text" />
-            </div>
-            <div class="form-group">
-              <label>Vorname</label>
-              <input v-model="form.vorname" type="text" />
-            </div>
-            <div class="form-group">
-              <label>Nachname</label>
-              <input v-model="form.nachname" type="text" />
-            </div>
-          </div>
-          
-          <div class="form-group">
-            <label>Geburtsname</label>
-            <input v-model="form.geburtsname" type="text" />
-          </div>
-          
-          <div class="form-row">
-            <div class="form-group">
-              <label>E-Mail 1</label>
-              <input v-model="form.email_1" type="email" />
-            </div>
-            <div class="form-group">
-              <label>E-Mail 2</label>
-              <input v-model="form.email_2" type="email" />
-            </div>
-          </div>
-          
-          <div class="form-group">
-            <label>Erreichbarkeit</label>
-            <select v-model="form.erreichbarkeit">
-              <option value="-unbekannt-">-unbekannt-</option>
-              <option value="E-Mail">E-Mail</option>
-              <option value="Festnetz">Festnetz</option>
-              <option value="WhatsApp">WhatsApp</option>
-              <option value="verstorben">verstorben</option>
-            </select>
-          </div>
-          
-          <div class="form-row">
-            <div class="form-group">
-              <label>Telefon 1</label>
-              <input v-model="form.telefon_1" type="tel" />
-            </div>
-            <div class="form-group">
-              <label>Telefon 2</label>
-              <input v-model="form.telefon_2" type="tel" />
-            </div>
-          </div>
-          
-          <div class="form-group">
-            <label>Mobil</label>
-            <input v-model="form.mobil" type="tel" />
-          </div>
-          
-          <div class="form-group">
-            <label>Adresse</label>
-            <input v-model="form.adresse" type="text" />
-          </div>
-          
-          <div class="form-row">
-            <div class="form-group">
-              <label>PLZ</label>
-              <input v-model="form.plz" type="text" />
-            </div>
-            <div class="form-group">
-              <label>Ort</label>
-              <input v-model="form.ort" type="text" />
-            </div>
-          </div>
-          
-          <div class="form-group">
-            <label>Land</label>
-            <input v-model="form.land" type="text" />
-          </div>
-          
-          <div class="form-group">
-            <label>Notizen</label>
-            <textarea v-model="form.notizen" rows="3"></textarea>
-          </div>
-          
-          <button type="submit" :disabled="saving" class="btn-primary">
-            {{ saving ? 'Speichern...' : 'Speichern' }}
-          </button>
-        </form>
-      </div>
-      
-      <div class="card">
-        <h2>Einwilligungen</h2>
-        <ConsentManager :person="person" @updated="loadData" />
-      </div>
-      
-      <div class="card">
-        <h2>Passwort ändern</h2>
-        <form @submit.prevent="changePassword">
-          <div class="form-row">
-            <div class="form-group">
-              <label>Neues Passwort</label>
-              <input v-model="newPassword" type="password" required />
-            </div>
-            <div class="form-group">
-              <label>Passwort bestätigen</label>
-              <input v-model="confirmPassword" type="password" required />
-            </div>
-          </div>
-          <button type="submit" :disabled="changingPassword" class="btn-primary">
-            {{ changingPassword ? 'Speichern...' : 'Passwort ändern' }}
-          </button>
-        </form>
-      </div>
+     <div v-else>
+        <div class="card">
+          <h2>Passwort ändern</h2>
+           <form @submit.prevent="changePassword">
+             <div class="form-row form-row--full">
+               <div class="form-group">
+                 <label>Benutzername</label>
+                 <input v-model="form.username" type="text" />
+               </div>
+             </div>
+             <div class="form-row">
+               <div class="form-group">
+                 <label>Neues Passwort</label>
+                 <input v-model="newPassword" type="password" required />
+               </div>
+               <div class="form-group">
+                 <label>Passwort bestätigen</label>
+                 <input v-model="confirmPassword" type="password" required />
+               </div>
+             </div>
+            <button type="submit" :disabled="changingPassword" class="btn-primary">
+              {{ changingPassword ? 'Speichern...' : 'Benutzername / Passwort ändern' }}
+            </button>
+          </form>
+        </div>
+       
+       <div class="card">
+         <h2>Meine Daten</h2>
+         <form @submit.prevent="updateData">
+             <div class="form-row form-row--three-cols">
+               <div class="form-group">
+                 <label>Vorname</label>
+                 <input v-model="form.vorname" type="text" />
+               </div>
+               <div class="form-group">
+                 <label>Nachname</label>
+                 <input v-model="form.nachname" type="text" />
+               </div>
+               <div class="form-group">
+                 <label>Geburtsname</label>
+                 <input v-model="form.geburtsname" type="text" />
+               </div>
+             </div>
+           
+           <div class="form-row">
+             <div class="form-group">
+               <label>E-Mail 1</label>
+               <input v-model="form.email_1" type="email" />
+             </div>
+             <div class="form-group">
+               <label>E-Mail 2</label>
+               <input v-model="form.email_2" type="email" />
+             </div>
+           </div>
+           
+           <div class="form-group">
+             <label>Erreichbarkeit</label>
+             <select v-model="form.erreichbarkeit">
+               <option value="-unbekannt-">-unbekannt-</option>
+               <option value="E-Mail">E-Mail</option>
+               <option value="Festnetz">Festnetz</option>
+               <option value="WhatsApp">WhatsApp</option>
+               <option value="verstorben">verstorben</option>
+             </select>
+           </div>
+           
+           <div class="form-row">
+             <div class="form-group">
+               <label>Telefon 1</label>
+               <input v-model="form.telefon_1" type="tel" />
+             </div>
+             <div class="form-group">
+               <label>Telefon 2</label>
+               <input v-model="form.telefon_2" type="tel" />
+             </div>
+           </div>
+           
+           <div class="form-group">
+             <label>Mobil</label>
+             <input v-model="form.mobil" type="tel" />
+           </div>
+           
+           <div class="form-group">
+             <label>Adresse</label>
+             <input v-model="form.adresse" type="text" />
+           </div>
+           
+           <div class="form-row">
+             <div class="form-group">
+               <label>PLZ</label>
+               <input v-model="form.plz" type="text" />
+             </div>
+             <div class="form-group">
+               <label>Ort</label>
+               <input v-model="form.ort" type="text" />
+             </div>
+           </div>
+           
+           <div class="form-group">
+             <label>Land</label>
+             <input v-model="form.land" type="text" />
+           </div>
+           
+           <div class="form-group">
+             <label>Notizen</label>
+             <textarea v-model="form.notizen" rows="3"></textarea>
+           </div>
+           
+           <button type="submit" :disabled="saving" class="btn-primary">
+             {{ saving ? 'Speichern...' : 'Speichern' }}
+           </button>
+         </form>
+       </div>
+       
+       <div class="card">
+         <h2>Einwilligungen</h2>
+         <ConsentManager :person="person" @updated="loadData" />
+       </div>
       
       <div class="card">
         <h2>Daten exportieren</h2>
@@ -332,10 +333,22 @@ h1 {
 }
 
 .form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
+   display: grid;
+   grid-template-columns: 1fr 1fr;
+   gap: 1rem;
+ }
+
+.form-row.form-row--four-cols {
+    grid-template-columns: repeat(4, 1fr);
+ }
+
+.form-row.form-row--three-cols {
+     grid-template-columns: repeat(3, 1fr);
+ }
+
+.form-row.form-row--full {
+     grid-template-columns: 1fr;
+ }
 
 .form-group {
   margin-bottom: 1rem;
