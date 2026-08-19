@@ -14,6 +14,7 @@ Das Hauptziel ist es, eine sichere und privatsphäre-schützende Möglichkeit zu
 - **Frontend:** Vue 3 + TypeScript + Vite
 - **Datenbank:** PostgreSQL 15
 - **Container:** Docker + Docker Compose
+- **Reverse Proxy:** Apache mit Let's Encrypt SSL (Produktion)
 
 ## Schnellstart
 
@@ -37,11 +38,11 @@ Das Hauptziel ist es, eine sichere und privatsphäre-schützende Möglichkeit zu
 
 3. Starte die Anwendung:
    ```bash
-   docker-compose up --build
+   docker compose up --build
    ```
 
 4. Öffne die Anwendung:
-   - Frontend: http://localhost:3000
+   - Frontend: http://localhost:8085
    - Backend API: http://localhost:8001
 
 ## Projektstruktur
@@ -58,7 +59,7 @@ Das Hauptziel ist es, eine sichere und privatsphäre-schützende Möglichkeit zu
 │       ├── models.py
 │       ├── schemas.py
 │       ├── auth.py
-│       ├── crud.py
+12:       ├── crud.py
 │       └── routers/
 │           ├── auth.py
 │           ├── persons.py
@@ -88,8 +89,10 @@ Das Hauptziel ist es, eine sichere und privatsphäre-schützende Möglichkeit zu
 - **DSGVO-konformes Management:** Explizite Verwaltung von Einwilligungen (Speicherung, Teilen von Daten, Fotos).
 - **Self-Service für Nutzer:** Registrierung via Magic-Links, Passwortverwaltung und eigenständige Datenänderung.
 - **Recht auf Vergessenwerden:** Automatisierte Prozesse zur Löschung oder Maskierung von Daten bei Widerruf der Einwilligung.
-- **Admin-Kontrolle:** Sicherer Import (mit Merge-Logik und automatischem Backup), Export für Serienbriefe und detailliertes Audit-Logging.
+- **Admin-Kontrolle:** Sicherer Import (mit Merge-Logik und automatischem Backup), Export für Serienbriefe, Alumni-Webseiten-Link und detailliertes Audit-Logging.
+- **Alumni-Webseiten-Link:** Konfigurierbarer Link zur Alumni-Webseite, sichtbar für angemeldete Benutzer auf der Startseite und im Admin-Panel.
 - **Sicherheit:** Strikte Trennung zwischen System-Logs (technisch) und Audit-Logs (Compliance).
+- **CSV Import/Export:** Import mit Merge-Logik (ID/E-Mail) und korrektem Spalten-Mapping, Export für Serienbriefe.
 
 ## API-Endpunkte
 
@@ -98,17 +101,23 @@ Das Hauptziel ist es, eine sichere und privatsphäre-schützende Möglichkeit zu
 - `POST /api/auth/verify` - Magic Link verifizieren
 
 ### Personen
-- `GET /api/persons/` - Öffentliche Liste (nur Personen mit Teilen-Einwilligung)
+- `GET /api/persons/` - Öffentliche Liste (nur Personen mit Teilen-Einwilligung, **authentifiziert**)
 - `GET /api/persons/me` - Eigene Daten abrufen
 - `PUT /api/persons/me` - Eigene Daten aktualisieren
 - `DELETE /api/persons/me` - Eigene Daten löschen
 - `GET /api/persons/export` - Alle Daten exportieren (Admin)
 
 ### Admin
+- `GET /api/admin/privacy-policy` - Datenschutzerklärung abrufen (inkl. Alumni-Webseiten-Link)
+- `PUT /api/admin/privacy-policy` - Datenschutzerklärung aktualisieren (inkl. Alumni-Webseiten-Link)
+- `POST /api/admin/backup` - Datenbank Backup herunterladen
+- `POST /api/admin/restore` - Datenbank aus Backup wiederherstellen
+- `GET /api/admin/export/all` - Alle Daten als CSV exportieren
+- `POST /api/admin/import` - CSV Import mit Merge-Logik (ID/E-Mail, Gruppen-Lookup)
 - `POST /api/admin/persons` - Person erstellen (Admin)
 - `PUT /api/admin/persons/{id}` - Person aktualisieren (Admin)
 - `GET /api/admin/persons` - Alle Personen auflisten (Admin)
 
 ## Lizenz
 
-Privat
+MIT License
