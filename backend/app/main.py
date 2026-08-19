@@ -82,9 +82,6 @@ Sie haben das Recht auf Auskunft, Berichtigung, Löschung ("Recht auf Vergessenw
 
 Speicherdauer
 Die Daten werden so lange gespeichert, wie Sie Ihre Zustimmung nicht widerrufen oder die Liste aufgelöst wird."""
-
-        if policy.alumni_website:
-            content += f"\n\nAlumni-Webseite\n{policy.alumni_website}"
         
         return {
             "title": title,
