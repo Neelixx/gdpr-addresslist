@@ -59,7 +59,7 @@ Das Hauptziel ist es, eine sichere und privatsphäre-schützende Möglichkeit zu
 │       ├── models.py
 │       ├── schemas.py
 │       ├── auth.py
-12:       ├── crud.py
+|       ├── crud.py
 │       └── routers/
 │           ├── auth.py
 │           ├── persons.py
