@@ -64,20 +64,24 @@
         </div>
       </div>
       
-      <div class="card">
-        <h2>Datenschutzerklärung</h2>
-        <div class="form-group">
-          <label>Titel</label>
-          <input v-model="privacyPolicyTitle" type="text" />
-        </div>
-        <div class="form-group">
-          <label>Inhalt</label>
-          <textarea v-model="privacyPolicy" rows="15" class="privacy-textarea"></textarea>
-        </div>
-        <button @click="savePrivacyPolicy" :disabled="savingPrivacy" class="btn-primary">
-          {{ savingPrivacy ? 'Speichern...' : 'Speichern' }}
-        </button>
-      </div>
+<div class="card">
+  <h2>Datenschutzerklärung</h2>
+  <div class="form-group">
+    <label>Titel</label>
+    <input v-model="privacyPolicyTitle" type="text" />
+  </div>
+  <div class="form-group">
+    <label>Inhalt</label>
+    <textarea v-model="privacyPolicy" rows="15" class="privacy-textarea"></textarea>
+  </div>
+  <div class="form-group">
+    <label>Link zur Alumni-Webseite</label>
+    <input v-model="alumniWebsite" type="text" placeholder="https://alumni-beispiel.de" />
+  </div>
+  <button @click="savePrivacyPolicy" :disabled="savingPrivacy" class="btn-primary">
+    {{ savingPrivacy ? 'Speichern...' : 'Speichern' }}
+  </button>
+</div>
       
       <div class="card">
         <h2>Backup / Restore / Export / Import</h2>
@@ -284,6 +288,8 @@ const restoreFile = ref<File |null>(null)
 const message = ref('')
 const error = ref('')
 const toasts = ref<Array<{message: string, type: 'success' | 'error' | 'info'}>>([])
+
+const alumniWebsite = ref('')
 
 function addToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
   toasts.value.push({ message, type })
@@ -620,36 +626,42 @@ async function loadPrivacyPolicy() {
     const response = await getPrivacyPolicyApi()
     privacyPolicyTitle.value = response.data.title
     privacyPolicy.value = response.data.content
+    alumniWebsite.value = response.data.alumni_website || ''
   } catch (e) {
     console.error('Fehler beim Laden der Datenschutzerklärung', e)
   }
 }
 
 async function savePrivacyPolicy() {
-  const parts = privacyPolicy.value.split('\n\n')
-  let zweck = ''
-  let verantwortlicher = ''
-  for (const part of parts) {
-    const lines = part.split('\n')
-    if (lines[0] === 'Zweck der Verarbeitung') {
-      zweck = lines.slice(1).join('\n')
+    const parts = privacyPolicy.value.split('\n\n')
+    let zweck = ''
+    let verantwortlicher = ''
+    for (const part of parts) {
+      const lines = part.split('\n')
+      if (lines[0] === 'Zweck der Verarbeitung') {
+        zweck = lines.slice(1).join('\n')
+      }
+      if (lines[0].startsWith('Verantwortlicher:')) {
+        // Extract "Max Datenschutzverantwortlicher, naboo61@gmail.com" from "Verantwortlicher: Max Datenschutzverantwortlicher, naboo61@gmail.com."
+        verantwortlicher = lines[0].replace('Verantwortlicher:', '').trim()
+      }
     }
-    if (lines[0].startsWith('Verantwortlicher:')) {
-      // Extract "Max Datenschutzverantwortlicher, naboo61@gmail.com" from "Verantwortlicher: Max Datenschutzverantwortlicher, naboo61@gmail.com."
-      verantwortlicher = lines[0].replace('Verantwortlicher:', '').trim()
-    }
-  }
   
-  savingPrivacy.value = true
-  try {
-    await updatePrivacyPolicyApi({ title: privacyPolicyTitle.value, zweck: zweck.trim(), verantwortlicher: verantwortlicher.trim() })
-    message.value = 'Datenschutzerklärung gespeichert'
-  } catch (e) {
-    error.value = 'Fehler beim Speichern der Datenschutzerklärung'
-  } finally {
-    savingPrivacy.value = false
+    savingPrivacy.value = true
+    try {
+      await updatePrivacyPolicyApi({
+        title: privacyPolicyTitle.value,
+        zweck: zweck.trim(),
+        verantwortlicher: verantwortlicher.trim(),
+        alumni_website: alumniWebsite.value.trim()
+      })
+      message.value = 'Datenschutzerklärung gespeichert'
+    } catch (e) {
+      error.value = 'Fehler beim Speichern der Datenschutzerklärung'
+    } finally {
+      savingPrivacy.value = false
+    }
   }
-}
 </script>
 
 <style scoped>

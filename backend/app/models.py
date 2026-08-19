@@ -74,9 +74,10 @@ class MagicToken(Base):
 
 class PrivacyPolicy(Base):
     __tablename__ = "privacy_policy"
-
+    
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False, default="Datenschutzerklärung für die Abiturientenliste")
     zweck = Column(Text, nullable=False)
     verantwortlicher = Column(Text, nullable=True)
+    alumni_website = Column(String, nullable=True)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

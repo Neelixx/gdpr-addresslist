@@ -184,6 +184,9 @@ def import_persons(db: Session, persons_data: List[dict], ip_address: Optional[s
         
         if existing:
             for key, value in person_data.items():
+                # Skip 'id' field to avoid primary key conflicts
+                if key == 'id':
+                    continue
                 if value is not None and hasattr(existing, key):
                     setattr(existing, key, value)
             log = AuditLog(

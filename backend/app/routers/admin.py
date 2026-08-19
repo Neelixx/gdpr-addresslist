@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, File, UploadFile
 from fastapi.responses import JSONResponse, FileResponse
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import Person, AuditLog, MagicToken, PrivacyPolicy
+from app.models import Person, Group, AuditLog, MagicToken, PrivacyPolicy
 from app.schemas import PersonCreate, PersonUpdate, PersonResponse
 from app.crud import create_person, update_person, get_persons, get_audit_logs, import_persons, delete_person
 from app.auth import verify_token, create_magic_token
@@ -104,9 +104,14 @@ async def import_csv(request: Request, file: UploadFile = File(...), db: Session
         
         persons_data = []
         for row in reader:
+            # Look up group by name to get the group ID
+            group_name = row.get('Gruppe', '').strip()
+            group = db.query(Group).filter(Group.name == group_name).first()
+            gruppe_id = group.id if group else None
+            
             person_data = {
                 'id': int(row['ID']) if row.get('ID') else None,
-                'gruppe': row.get('Gruppe', '').strip(),
+                'gruppe_id': gruppe_id,
                 'vorname': row.get('Vorname', '').strip(),
                 'nachname': row.get('Nachname', '').strip(),
                 'geburtsname': row.get('Geburtsname', '').strip() or None,
@@ -120,16 +125,17 @@ async def import_csv(request: Request, file: UploadFile = File(...), db: Session
                 'erreichbarkeit': row.get('Erreichbarkeit', '').strip(),
                 'email_1': row.get('Email_1', '').strip() or None,
                 'email_2': row.get('Email_2', '').strip() or None,
-                'username': row.get('loginname', '').strip() or None,
+                'username': row.get('Benutzername', '').strip() or None,
                 'admin': row.get('Admin', '').strip().lower() in ('1', 'true', 'yes'),
                 'notizen': row.get('Notizen', '').strip() or None,
             }
             
-            consent_storage = row.get('Zusage_1', '').strip()
-            consent_sharing = row.get('Zusage_2', '').strip()
+            consent_storage = row.get('Zusage_Speicherung', '').strip()
+            consent_sharing = row.get('Zusage_Teilen', '').strip()
+            consent_photos = row.get('Zusage_Fotos', '').strip()
             person_data['consent_storage'] = consent_storage.lower() in ('1', 'true', 'yes')
             person_data['consent_sharing'] = consent_sharing.lower() in ('1', 'true', 'yes')
-            person_data['consent_photos'] = False
+            person_data['consent_photos'] = consent_photos.lower() in ('1', 'true', 'yes')
             
             persons_data.append(person_data)
         
@@ -502,10 +508,14 @@ Sie haben das Recht auf Auskunft, Berichtigung, Löschung ("Recht auf Vergessenw
 
 Speicherdauer
 Die Daten werden so lange gespeichert, wie Sie Ihre Zustimmung nicht widerrufen oder die Liste aufgelöst wird."""
+
+    if policy.alumni_website:
+        content += f"\n\nAlumni-Webseite\n{policy.alumni_website}"
     
     return {
         "title": policy.title,
-        "content": content
+        "content": content,
+        "alumni_website": policy.alumni_website
     }
 
 @router.put("/privacy-policy")
@@ -527,6 +537,7 @@ def update_privacy_policy(request: Request, policy_update: dict, db: Session = D
     policy.zweck = policy_update.get("zweck", policy.zweck)
     policy.title = policy_update.get("title", policy.title)
     policy.verantwortlicher = policy_update.get("verantwortlicher", policy.verantwortlicher)
+    policy.alumni_website = policy_update.get("alumni_website", policy.alumni_website)
     db.commit()
     db.refresh(policy)
     

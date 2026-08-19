@@ -1,0 +1,1 @@
+docker exec alumni_db psql -U alumni_admin -d alumni_db -c "DELETE FROM persons WHERE id != 1;"

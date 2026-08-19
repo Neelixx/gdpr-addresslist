@@ -18,6 +18,13 @@
       </div>
     </div>
     
+    <div v-if="isLoggedIn && alumniWebsite" class="alumni-website">
+      <h3>Alumni-Netzwerk</h3>
+      <a :href="alumniWebsite" target="_blank" rel="noopener noreferrer" class="btn-primary">
+        Zur Alumni-Webseite
+      </a>
+    </div>
+    
     <div class="cta">
       <router-link v-if="!isLoggedIn" to="/login" class="btn-primary">Anmelden</router-link>
       <router-link v-else to="/meine-daten" class="btn-primary">Zu Meine Daten</router-link>
@@ -27,11 +34,26 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
+import { getPrivacyPolicy as getPrivacyPolicyApi } from '../api/admin'
 
 const authStore = useAuthStore()
 const isLoggedIn = computed(() => authStore.isLoggedIn)
+const alumniWebsite = ref('')
+
+async function loadPrivacyPolicy() {
+  try {
+    const response = await getPrivacyPolicyApi()
+    alumniWebsite.value = response.data.alumni_website || ''
+  } catch (e) {
+    console.error('Fehler beim Laden der Datenschutzerklärung', e)
+  }
+}
+
+onMounted(() => {
+  loadPrivacyPolicy()
+})
 </script>
 
 <style scoped>
@@ -72,6 +94,19 @@ h1 {
 
 .feature p {
   color: #666;
+}
+
+.alumni-website {
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.alumni-website h3 {
+  margin: 0;
+  color: #2c3e50;
 }
 
 .cta {
