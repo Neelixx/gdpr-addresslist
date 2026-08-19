@@ -381,7 +381,7 @@ def export_all_data(request: Request, db: Session = Depends(get_db)):
         magic_link = ""
         if person.email_1:
             token = create_magic_token(person.email_1)
-            magic_link = f"http://localhost:8085/auth/verify?token={token}"
+            magic_link = f"{settings.FRONTEND_URL}/auth/verify?token={token}"
         
         writer.writerow([
             person.id,
@@ -440,7 +440,7 @@ def generate_magic_links(request: Request, person_ids: List[int] = Form(...), db
         person = db.query(Person).filter(Person.id == person_id).first()
         if person and person.email_1:
             magic_token = create_magic_token(person.email_1)
-            magic_link = f"http://localhost:8085/auth/verify?token={magic_token}"
+            magic_link = f"{settings.FRONTEND_URL}/auth/verify?token={magic_token}"
             results.append({
                 "id": person.id,
                 "name": f"{person.vorname} {person.nachname}",
