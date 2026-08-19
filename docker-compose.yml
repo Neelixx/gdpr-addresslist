@@ -38,6 +38,9 @@ services:
       FRONTEND_URL: ${FRONTEND_URL}
       HCAPTCHA_SECRET_KEY: ${HCAPTCHA_SECRET_KEY}
       HCAPTCHA_SITE_KEY: ${HCAPTCHA_SITE_KEY}
+      ADMIN_USER: ${ADMIN_USER}
+      ADMIN_DEFAULTPASSWORD: ${ADMIN_DEFAULTPASSWORD}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
     volumes:
       - ./logs:/app/logs
       - ./backups:/app/backups
