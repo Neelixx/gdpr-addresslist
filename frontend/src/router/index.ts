@@ -15,7 +15,7 @@ const router = createRouter({
     { path: '/privacy', name: 'privacy', component: PrivacyPolicyView },
     { path: '/auth/verify', name: 'verify', component: LoginView },
     { path: '/admin', name: 'admin', component: AdminView, meta: { requiresAuth: true, requiresAdmin: true } },
-    { path: '/persons', name: 'persons', component: PublicPersonsView }
+    { path: '/persons', name: 'persons', component: PublicPersonsView, meta: { requiresAuth: true } }
   ]
 })
 
