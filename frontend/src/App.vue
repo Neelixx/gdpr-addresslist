@@ -4,7 +4,10 @@
       <div class="nav-brand">
         <router-link to="/">Alumni Adressverwaltung</router-link>
       </div>
-      <div class="nav-links">
+      <button class="nav-toggle" @click="mobileMenuOpen = !mobileMenuOpen" aria-label="Navigation toggeln">
+        <span class="hamburger" :class="{ open: mobileMenuOpen }"></span>
+      </button>
+      <div class="nav-links" :class="{ open: mobileMenuOpen }">
         <router-link to="/">Startseite</router-link>
         <router-link to="/privacy">Datenschutz</router-link>
         <router-link to="/persons">Adressliste</router-link>
@@ -19,23 +22,23 @@
     <main class="container">
       <router-view />
     </main>
-<footer class="footer">
-        <div class="footer-content">
-          <div class="footer-left">
-            <a href="https://github.com/Neelixx/gdpr-addresslist" target="_blank" rel="noopener noreferrer">
-              gdpr-addresslist, MIT-License
-            </a>
-          </div>
-          <div class="footer-right">
-            <span>Version {{ version }} • Commit {{ commit }}</span>
-          </div>
+    <footer class="footer">
+      <div class="footer-content">
+        <div class="footer-left">
+          <a href="https://github.com/Neelixx/gdpr-addresslist" target="_blank" rel="noopener noreferrer">
+            gdpr-addresslist, MIT-License
+          </a>
         </div>
-      </footer>
+        <div class="footer-right">
+          <span>Version {{ version }} • Commit {{ commit }}</span>
+        </div>
+      </div>
+    </footer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 
@@ -43,6 +46,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const isLoggedIn = computed(() => !!authStore.token)
 const isAdmin = computed(() => authStore.isAdmin)
+const mobileMenuOpen = ref(false)
 
 const version = import.meta.env.VITE_APP_VERSION || '1.0.0'
 const commit = import.meta.env.VITE_GIT_COMMIT || 'unknown'
@@ -76,6 +80,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: relative;
 }
 
 .nav-brand a {
@@ -83,6 +88,55 @@ body {
   text-decoration: none;
   font-size: 1.25rem;
   font-weight: bold;
+  white-space: nowrap;
+}
+
+.nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  z-index: 100;
+}
+
+.hamburger {
+  display: block;
+  width: 24px;
+  height: 2px;
+  background: white;
+  position: relative;
+  transition: background 0.3s ease;
+}
+
+.hamburger::before,
+.hamburger::after {
+  content: '';
+  position: absolute;
+  width: 24px;
+  height: 2px;
+  background: white;
+  transition: transform 0.3s ease;
+}
+
+.hamburger::before {
+  top: -8px;
+}
+
+.hamburger::after {
+  bottom: -8px;
+}
+
+.hamburger.open {
+  background: transparent;
+}
+
+.hamburger.open::before {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+
+.hamburger.open::after {
+  transform: rotate(-45deg) translate(5px, -5px);
 }
 
 .nav-links {
@@ -94,6 +148,7 @@ body {
 .nav-links a {
   color: white;
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .nav-links a:hover {
@@ -159,6 +214,38 @@ body {
 }
 
 @media (max-width: 768px) {
+  .nav-toggle {
+    display: block;
+  }
+
+  .nav-links {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: #2c3e50;
+    flex-direction: column;
+    padding: 1rem 2rem;
+    gap: 1rem;
+    display: none;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
+
+  .nav-links.open {
+    display: flex;
+  }
+
+  .nav-links a,
+  .nav-links button {
+    width: 100%;
+    text-align: left;
+    padding: 0.5rem 0;
+  }
+
+  .nav-brand a {
+    font-size: 1.1rem;
+  }
+
   .footer-content {
     flex-direction: column;
     text-align: center;
