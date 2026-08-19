@@ -19,6 +19,18 @@
     <main class="container">
       <router-view />
     </main>
+<footer class="footer">
+        <div class="footer-content">
+          <div class="footer-left">
+            <a href="https://github.com/Neelixx/gdpr-addresslist" target="_blank" rel="noopener noreferrer">
+              gdpr-addresslist, MIT-License
+            </a>
+          </div>
+          <div class="footer-right">
+            <span>Version {{ version }} • Commit {{ commit }}</span>
+          </div>
+        </div>
+      </footer>
   </div>
 </template>
 
@@ -31,6 +43,9 @@ const router = useRouter()
 const authStore = useAuthStore()
 const isLoggedIn = computed(() => !!authStore.token)
 const isAdmin = computed(() => authStore.isAdmin)
+
+const version = import.meta.env.VITE_APP_VERSION || '1.0.0'
+const commit = import.meta.env.VITE_GIT_COMMIT || 'unknown'
 
 function logout() {
   authStore.logout()
@@ -49,6 +64,9 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: #f5f5f5;
   color: #333;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .navbar {
@@ -100,5 +118,50 @@ body {
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
+  flex: 1;
+}
+
+.footer {
+  background-color: #2c3e50;
+  color: white;
+  padding: 1.5rem 2rem;
+  margin-top: auto;
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.footer-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.footer-left a {
+  color: #3498db;
+  text-decoration: none;
+}
+
+.footer-left a:hover {
+  text-decoration: underline;
+}
+
+.footer-right {
+  font-size: 0.85rem;
+  color: #bdc3c7;
+}
+
+@media (max-width: 768px) {
+  .footer-content {
+    flex-direction: column;
+    text-align: center;
+  }
 }
 </style>
