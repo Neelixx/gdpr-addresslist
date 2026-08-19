@@ -113,6 +113,10 @@
         <h2>Magic Links generieren</h2>
         <p class="hint">Generiert Magic Links für ausgewählte Benutzer.</p>
         <div class="user-list">
+          <div class="user-item select-all">
+            <input type="checkbox" v-model="selectAllUsers" @change="toggleSelectAll" />
+            <label>Alle auswählen</label>
+          </div>
           <div v-for="user in users" :key="user.id" class="user-item">
             <input type="checkbox" :value="user.id" v-model="selectedUserIds" />
             <label>{{ user.vorname }} {{ user.nachname }} ({{ user.email_1 }})</label>
@@ -272,7 +276,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { createPerson, updatePerson, deletePerson, getAllPersons, importCSV as importCSVApi, backupDatabase as backupDatabaseApi, restoreDatabase as restoreDatabaseApi, exportAllData as exportAllDataApi, generateMagicLinks as generateMagicLinksApi, getPrivacyPolicy as getPrivacyPolicyApi, updatePrivacyPolicy as updatePrivacyPolicyApi } from '../api/admin'
 import { getGroups as getGroupsApi, createGroup as createGroupApi, updateGroup as updateGroupApi, deleteGroup as deleteGroupApi } from '../api/groups'
@@ -280,6 +284,7 @@ import { getGroups as getGroupsApi, createGroup as createGroupApi, updateGroup a
 const authStore = useAuthStore()
 const users = ref([])
 const selectedUserIds = ref<number[]>([])
+const selectAllUsers = ref(false)
 const creating = ref(false)
 const importing = ref(false)
 const restoring = ref(false)
@@ -291,6 +296,11 @@ const toasts = ref<Array<{message: string, type: 'success' | 'error' | 'info'}>>
 
 const alumniWebsite = ref('')
 
+// Watcher to keep selectAllUsers in sync with individual checkboxes
+watch(selectedUserIds, (newVal) => {
+  selectAllUsers.value = newVal.length > 0 && newVal.length === users.value.length
+})
+
 function addToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
   toasts.value.push({ message, type })
   setTimeout(() => {
@@ -301,6 +311,14 @@ function addToast(message: string, type: 'success' | 'error' | 'info' = 'info') 
 
 function removeToast(index: number) {
   toasts.value.splice(index, 1)
+}
+
+function toggleSelectAll() {
+  if (selectAllUsers.value) {
+    selectedUserIds.value = users.value.map(u => u.id)
+  } else {
+    selectedUserIds.value = []
+  }
 }
 
 const newUser = ref({

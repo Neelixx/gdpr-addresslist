@@ -25,7 +25,7 @@
             v-model="username"
             type="text"
             id="username"
-            placeholder="admin"
+            placeholder="vorname.nachname"
             required
           />
         </div>
